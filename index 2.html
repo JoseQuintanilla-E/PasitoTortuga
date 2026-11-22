@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>De la Tierra a la Luna</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Nunito:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--noche:#0c1226;--noche2:#1a2347;--ambar:#ffd27a;--texto:#f3efe2;--apagado:#8f9bc4;--borde:#2f3b6b;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:radial-gradient(ellipse at 70% 15%,var(--noche2),var(--noche) 70%);color:var(--texto);font-family:"Nunito",system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+header{padding:14px 18px 0;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:space-between;z-index:2}
+h1{font:italic 500 clamp(24px,5vw,42px)/1.1 "Cormorant Garamond",Georgia,serif;margin:0}
+header p{margin:4px 0 0;color:var(--apagado);font-size:14px}
+nav{display:flex;gap:8px;flex-wrap:wrap}
+button,select,input,textarea{font:inherit;color:inherit}
+.btn{background:rgba(10,15,36,.7);border:1px solid var(--borde);border-radius:999px;padding:8px 14px;cursor:pointer}
+.btn:hover,.btn:focus-visible{border-color:var(--ambar)}
+.btn.principal{background:var(--ambar);color:#241a00;border-color:var(--ambar);font-weight:600}
+#escena{flex:1;min-height:0}
+svg{width:100%;height:100%;display:block}
+.punto{cursor:pointer;outline:none}
+.punto .vis{fill:#56618f;transition:r .2s,fill .3s}
+.punto.vivido .vis{fill:var(--ambar);filter:drop-shadow(0 0 4px var(--ambar))}
+.punto:hover .vis,.punto:focus-visible .vis{r:8}
+.punto.sel .vis{fill:#fff;r:8}
+.punto.ultimo .vis{animation:late 2s ease-in-out infinite}
+@keyframes late{50%{r:8}}
+.pata{animation:paso .6s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:center}
+.pata.b{animation-delay:.3s}
+@keyframes paso{to{transform:translateX(2px)}}
+#tarjeta{margin:0 auto 14px;width:min(600px,calc(100% - 28px));background:rgba(10,15,36,.82);border:1px solid var(--borde);border-radius:14px;padding:14px 18px;backdrop-filter:blur(6px);display:flex;gap:14px;align-items:center}
+#foto{max-width:36%;max-height:150px;border-radius:10px;object-fit:cover}
+#fecha{color:var(--ambar);font-size:13px;margin:0 0 6px}
+#frase{font:italic 500 clamp(18px,3.4vw,23px)/1.35 "Cormorant Garamond",Georgia,serif;margin:0}
+dialog{background:#10183a;color:var(--texto);border:1px solid var(--borde);border-radius:16px;padding:20px;width:min(380px,calc(100% - 28px))}
+dialog::backdrop{background:rgba(3,6,18,.7)}
+dialog h2{margin:0 0 12px;font:italic 500 26px "Cormorant Garamond",Georgia,serif}
+label{display:block;font-size:13px;color:var(--apagado);margin:10px 0 4px}
+input,textarea,select{width:100%;background:#0a1030;border:1px solid var(--borde);border-radius:10px;padding:9px 10px}
+textarea{min-height:90px;resize:vertical}
+.fila{display:flex;gap:8px;margin-top:14px;justify-content:flex-end;align-items:center}
+#msg{font-size:13px;margin:10px 0 0;min-height:18px}
+.cal-cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.cal-cab strong{text-transform:capitalize}
+#grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+#grid .dow{font-size:12px;color:var(--apagado)}
+#grid button{aspect-ratio:1;border:0;background:transparent;border-radius:50%;cursor:default;color:#5d688f}
+#grid button.tiene{background:var(--ambar);color:#241a00;font-weight:600;cursor:pointer}
+#grid button.tiene:hover,#grid button.tiene:focus-visible{outline:2px solid #fff}
+#vol{width:100%}
+@media (prefers-reduced-motion:reduce){.pata,.punto.ultimo .vis{animation:none}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1 id="titulo"></h1><p id="sub"></p></div>
+  <nav>
+    <button class="btn" id="bMusica">Música</button>
+    <button class="btn" id="bCal">Calendario</button>
+    <button class="btn" id="bUlt">Lo más reciente</button>
+    <button class="btn principal" id="bNuevo">Generar recuerdo</button>
+  </nav>
+</header>
+<div id="escena">
+<svg id="svg" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Camino de la Tierra a la Luna con momentos">
+<defs>
+<radialGradient id="gT" cx="35%" cy="30%"><stop offset="0" stop-color="#7db8ff"/><stop offset="1" stop-color="#1d4a9c"/></radialGradient>
+<radialGradient id="gL" cx="35%" cy="30%"><stop offset="0" stop-color="#fffdf0"/><stop offset="1" stop-color="#b9b6a4"/></radialGradient>
+</defs>
+<g id="estrellas"></g>
+<circle cx="140" cy="440" r="95" fill="url(#gT)"/>
+<path d="M95 400q25-30 55-18t10 40-45 20-20-42zM170 470q30-10 45 15t-25 30-20-45z" fill="#5fae6b" opacity=".85"/>
+<circle cx="860" cy="120" r="60" fill="url(#gL)"/>
+<g fill="#a9a692" opacity=".6"><circle cx="840" cy="105" r="10"/><circle cx="880" cy="140" r="7"/><circle cx="850" cy="150" r="5"/></g>
+<path id="ruta" d="M225 395 C 350 170, 560 330, 800 150" fill="none" stroke="#3a4577" stroke-width="2" stroke-dasharray="3 9" stroke-linecap="round"/>
+<g id="puntos"></g>
+<g id="tortuga" style="display:none">
+<g class="pata"><ellipse cx="-9" cy="9" rx="5" ry="3" fill="#6fa86a"/></g>
+<g class="pata b"><ellipse cx="9" cy="9" rx="5" ry="3" fill="#6fa86a"/></g>
+<g class="pata b"><ellipse cx="-9" cy="-9" rx="5" ry="3" fill="#6fa86a"/></g>
+<g class="pata"><ellipse cx="9" cy="-9" rx="5" ry="3" fill="#6fa86a"/></g>
+<circle cx="17" cy="0" r="5" fill="#8cc383"/><circle cx="19" cy="-2" r="1.2" fill="#0c1226"/>
+<ellipse cx="0" cy="0" rx="14" ry="10" fill="#4f8a55"/>
+<path d="M-7 0h14M0-7v14" stroke="#376b3e" stroke-width="1.5"/>
+</g>
+</svg>
+</div>
+<div id="tarjeta" aria-live="polite">
+  <img id="foto" alt="" hidden>
+  <div><p id="fecha"></p><p id="frase">Cargando nuestros momentos…</p></div>
+</div>
+
+<dialog id="dMusica">
+  <h2>Música</h2>
+  <label for="cancion">Canción</label>
+  <select id="cancion"></select>
+  <div class="fila" style="justify-content:space-between">
+    <button class="btn" id="bPlay">Reproducir</button>
+    <button class="btn" id="bSilencio">Silenciar</button>
+  </div>
+  <label for="vol">Volumen</label>
+  <input type="range" id="vol" min="0" max="1" step="0.05" value="0.6">
+  <div class="fila"><button class="btn" data-cerrar>Cerrar</button></div>
+</dialog>
+
+<dialog id="dCal">
+  <div class="cal-cab"><button class="btn" id="calPrev" aria-label="Mes anterior">‹</button><strong id="calTitulo"></strong><button class="btn" id="calSig" aria-label="Mes siguiente">›</button></div>
+  <div id="grid"></div>
+  <p style="font-size:13px;color:var(--apagado)">Los días en ámbar tienen un recuerdo. Toca uno y la tortuga irá hasta él.</p>
+  <div class="fila"><button class="btn" data-cerrar>Cerrar</button></div>
+</dialog>
+
+<dialog id="dNuevo">
+  <h2>Generar recuerdo</h2>
+  <label for="nFecha">¿Qué día fue?</label>
+  <input type="date" id="nFecha">
+  <label for="nFrase">¿Qué pasó?</label>
+  <textarea id="nFrase" maxlength="400"></textarea>
+  <label for="nFoto">Foto (opcional)</label>
+  <input type="file" id="nFoto" accept="image/*">
+  <label for="nClave">Clave</label>
+  <input type="password" id="nClave" autocomplete="off">
+  <p id="msg" role="status"></p>
+  <div class="fila"><button class="btn" data-cerrar>Cancelar</button><button class="btn principal" id="bGuardar">Guardar recuerdo</button></div>
+</dialog>
+
+<audio id="audio" preload="none"></audio>
+
+<script>
+/* ================= CONFIGURACIÓN ================= */
+const TITULO    = "De la Tierra a la Luna";
+const SUBTITULO = "Cada punto es un momento nuestro";
+const API_URL   = "https://script.google.com/macros/s/AKfycbwEx411tuJp_IAOYWoDJsHINPyyIS0iAzVRVtC2aThTq1omPPJifbWKbBM62ZeSdsU/exec";   // pega aquí el enlace de tu Apps Script (termina en /exec)
+const MUSICA = [        // archivos mp3 dentro de la carpeta "musica" del repositorio
+  // { titulo: "Nuestra canción", archivo: "musica/nuestra-cancion.mp3" },
+];
+/* ================================================== */
+
+const RESPALDO=[
+ {fecha:"2024-02-14",frase:"La primera vez que nos reímos hasta que nos dolió la cara.",foto:""},
+ {fecha:"2024-03-02",frase:"Ese café que se enfrió porque no parábamos de hablar.",foto:""},
+ {fecha:"2024-05-20",frase:"Cuando entendí que contigo el silencio también es compañía.",foto:""}];
+
+const NS="http://www.w3.org/2000/svg", $=id=>document.getElementById(id);
+const ruta=$("ruta"), L=ruta.getTotalLength(), tort=$("tortuga");
+const reducir=matchMedia("(prefers-reduced-motion: reduce)").matches;
+let ms=[], els=[], ts=[], pos=0, anim=0, firma="", selIdx=-1, calMes=new Date(), ciclo={};
+
+$("titulo").textContent=TITULO; document.title=TITULO; $("sub").textContent=SUBTITULO;
+
+(function(){let s=7;const r=()=>(s=(s*16807)%2147483647)/2147483647;
+for(let i=0;i<90;i++){const c=document.createElementNS(NS,"circle");
+c.setAttribute("cx",r()*1000);c.setAttribute("cy",r()*560);c.setAttribute("r",.5+r()*1.3);
+c.setAttribute("fill","#cfd6f5");c.setAttribute("opacity",.25+r()*.5);$("estrellas").appendChild(c);}})();
+
+const fmt=f=>{const d=new Date(f+"T12:00:00");return isNaN(d)?f:d.toLocaleDateString("es",{day:"numeric",month:"long",year:"numeric"});};
+
+/* ---------- datos ---------- */
+async function cargar(){
+  if(!API_URL) return RESPALDO;
+  try{const r=await fetch(API_URL+"?v="+Date.now());return (await r.json()).momentos||[];}
+  catch(e){return null;}
+}
+
+/* ---------- tortuga ---------- */
+function poner(len){
+  pos=len;
+  const p=ruta.getPointAtLength(len),q=ruta.getPointAtLength(Math.min(len+2,L)),
+        a=Math.atan2(q.y-p.y,q.x-p.x)*180/Math.PI;
+  tort.setAttribute("transform","translate("+p.x+","+(p.y-14)+") rotate("+a+")");
+  els.forEach((e,i)=>e.classList.toggle("vivido",ts[i]<=len+1));
+}
+function caminar(destino,fin){
+  cancelAnimationFrame(anim);
+  const ini=pos,dist=Math.abs(destino-ini);
+  if(reducir||dist<1){poner(destino);fin&&fin();return;}
+  const dur=Math.min(4500,700+dist*5),t0=performance.now();
+  (function paso(n){
+    const k=Math.min(1,(n-t0)/dur),e=1-Math.pow(1-k,3);
+    poner(ini+(destino-ini)*e);
+    if(k<1)anim=requestAnimationFrame(paso);else fin&&fin();
+  })(t0);
+}
+
+/* ---------- mostrar / ir ---------- */
+function mostrar(i){
+  selIdx=i;const m=ms[i];
+  els.forEach((e,k)=>e.classList.toggle("sel",k===i));
+  $("fecha").textContent=fmt(m.fecha);$("frase").textContent="“"+m.frase+"”";
+  const f=$("foto");
+  if(m.foto){f.src=m.foto;f.hidden=false;f.onerror=()=>{f.hidden=true;};}else{f.hidden=true;f.removeAttribute("src");}
+}
+function ir(i){caminar(ts[i],()=>mostrar(i));}
+
+/* ---------- dibujar ---------- */
+function dibujar(lista,irAlUltimo){
+  ms=lista.filter(m=>m.frase).map((m,i)=>({...m,o:i})).sort((a,b)=>a.fecha<b.fecha?-1:a.fecha>b.fecha?1:a.o-b.o);
+  const g=$("puntos");g.innerHTML="";els=[];ts=[];
+  const slots=Math.max(ms.length,30)+1;
+  ms.forEach((m,i)=>{
+    const len=(i+1)/slots*L,p=ruta.getPointAtLength(len);
+    const e=document.createElementNS(NS,"g");
+    e.setAttribute("class","punto");e.setAttribute("tabindex","0");e.setAttribute("role","button");
+    e.setAttribute("aria-label",fmt(m.fecha)+": "+m.frase);
+    e.innerHTML='<circle cx="'+p.x+'" cy="'+p.y+'" r="16" fill="transparent"/><circle class="vis" cx="'+p.x+'" cy="'+p.y+'" r="5"/>';
+    e.addEventListener("click",()=>ir(i));
+    e.addEventListener("keydown",k=>{if(k.key==="Enter"||k.key===" "){k.preventDefault();ir(i);}});
+    g.appendChild(e);els.push(e);ts.push(len);
+  });
+  if(!ms.length){tort.style.display="none";$("frase").textContent="Aquí empezará nuestro camino.";return;}
+  const u=ms.length-1;els[u].classList.add("ultimo");
+  tort.style.display="";
+  if(irAlUltimo){poner(Math.min(pos,L));ir(u);}else{poner(pos);if(selIdx>=0&&selIdx<ms.length)mostrar(selIdx);}
+  const d=new Date(ms[u].fecha+"T12:00:00");calMes=isNaN(d)?new Date():d;
+}
+
+async function actualizar(forzar){
+  const lista=await cargar();
+  if(lista===null){if(!ms.length)$("frase").textContent="No pude cargar los recuerdos. Revisa la conexión y vuelve a abrir el enlace.";return;}
+  const f=JSON.stringify(lista);
+  if(f===firma&&!forzar)return;
+  const habia=firma!=="";firma=f;
+  dibujar(lista,true);
+}
+actualizar();
+setInterval(()=>actualizar(),60000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)actualizar();});
+
+/* ---------- botones y diálogos ---------- */
+document.querySelectorAll("[data-cerrar]").forEach(b=>b.addEventListener("click",()=>b.closest("dialog").close()));
+$("bUlt").onclick=()=>{if(ms.length)ir(ms.length-1);};
+
+/* calendario */
+function pintarCal(){
+  const y=calMes.getFullYear(),mes=calMes.getMonth();
+  $("calTitulo").textContent=new Date(y,mes,1).toLocaleDateString("es",{month:"long",year:"numeric"});
+  const dias=new Date(y,mes+1,0).getDate(),off=(new Date(y,mes,1).getDay()+6)%7;
+  const con=new Set(ms.map(m=>m.fecha));
+  let h=["L","M","X","J","V","S","D"].map(d=>'<span class="dow">'+d+'</span>').join("");
+  for(let i=0;i<off;i++)h+="<span></span>";
+  for(let d=1;d<=dias;d++){
+    const f=y+"-"+String(mes+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+    h+='<button type="button" data-f="'+f+'" class="'+(con.has(f)?"tiene":"")+'"'+(con.has(f)?"":" tabindex=\"-1\"")+'>'+d+'</button>';
+  }
+  $("grid").innerHTML=h;
+}
+$("bCal").onclick=()=>{pintarCal();$("dCal").showModal();};
+$("calPrev").onclick=()=>{calMes=new Date(calMes.getFullYear(),calMes.getMonth()-1,1);pintarCal();};
+$("calSig").onclick=()=>{calMes=new Date(calMes.getFullYear(),calMes.getMonth()+1,1);pintarCal();};
+$("grid").addEventListener("click",e=>{
+  const f=e.target.dataset&&e.target.dataset.f;if(!f)return;
+  const ids=ms.map((m,i)=>m.fecha===f?i:-1).filter(i=>i>=0);
+  if(!ids.length)return;
+  ciclo[f]=((ciclo[f]??-1)+1)%ids.length;   // si hay varios el mismo día, cada toque pasa al siguiente
+  $("dCal").close();ir(ids[ciclo[f]]);
+});
+
+/* música */
+const audio=$("audio");audio.volume=.6;
+if(!MUSICA.length)$("bMusica").hidden=true;
+MUSICA.forEach((c,i)=>{const o=document.createElement("option");o.value=i;o.textContent=c.titulo;$("cancion").appendChild(o);});
+function cargarCancion(){audio.src=MUSICA[$("cancion").value].archivo;}
+function sync(){$("bPlay").textContent=audio.paused?"Reproducir":"Pausar";$("bSilencio").textContent=audio.muted?"Quitar silencio":"Silenciar";}
+$("bMusica").onclick=()=>{if(!audio.src&&MUSICA.length)cargarCancion();sync();$("dMusica").showModal();};
+$("cancion").onchange=()=>{cargarCancion();audio.play();};
+$("bPlay").onclick=()=>{if(!audio.src)cargarCancion();audio.paused?audio.play():audio.pause();};
+$("bSilencio").onclick=()=>{audio.muted=!audio.muted;sync();};
+$("vol").oninput=e=>{audio.volume=+e.target.value;};
+audio.onplay=audio.onpause=sync;
+audio.onended=()=>{const s=$("cancion");s.value=(+s.value+1)%MUSICA.length;cargarCancion();audio.play();};
+
+/* generar recuerdo */
+const hoy=()=>new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+$("bNuevo").onclick=()=>{
+  $("nFecha").value=hoy();$("nFrase").value="";$("nFoto").value="";
+  $("nClave").value=localStorage.getItem("clave")||"";$("msg").textContent="";
+  $("dNuevo").showModal();
+};
+function reducirFoto(file){
+  return new Promise((ok,mal)=>{
+    const img=new Image();img.onload=()=>{
+      const k=Math.min(1,1000/Math.max(img.width,img.height)),c=document.createElement("canvas");
+      c.width=img.width*k;c.height=img.height*k;c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      ok(c.toDataURL("image/jpeg",.8).split(",")[1]);};
+    img.onerror=mal;img.src=URL.createObjectURL(file);
+  });
+}
+$("bGuardar").onclick=async()=>{
+  const msg=$("msg"),fecha=$("nFecha").value,frase=$("nFrase").value.trim(),clave=$("nClave").value;
+  if(!API_URL){msg.textContent="Falta pegar el enlace de Apps Script en API_URL.";return;}
+  if(!fecha||!frase){msg.textContent="Escribe la fecha y qué pasó.";return;}
+  $("bGuardar").disabled=true;msg.textContent="Guardando…";
+  try{
+    const archivo=$("nFoto").files[0],foto=archivo?await reducirFoto(archivo):"";
+    const r=await fetch(API_URL,{method:"POST",body:JSON.stringify({clave,fecha,frase,foto})});
+    const j=await r.json();
+    if(!j.ok){msg.textContent=j.error||"No se pudo guardar.";}
+    else{
+      localStorage.setItem("clave",clave);$("dNuevo").close();
+      await actualizar(true);
+      const i=ms.findIndex(m=>m.fecha===fecha&&m.frase===frase);if(i>=0)ir(i);
+    }
+  }catch(e){msg.textContent="Algo falló al guardar. Intenta otra vez.";}
+  $("bGuardar").disabled=false;
+};
+</script>
+</body>
+</html>
