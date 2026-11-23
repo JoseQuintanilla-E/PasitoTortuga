@@ -51,16 +51,18 @@ textarea{min-height:90px;resize:vertical}
 #grid button.tiene{background:var(--ambar);color:#241a00;font-weight:600;cursor:pointer}
 #grid button.tiene:hover,#grid button.tiene:focus-visible{outline:2px solid #fff}
 #vol{width:100%}
+#grid button.cita{box-shadow:inset 0 0 0 2px var(--ambar);color:var(--texto);cursor:pointer}
 @media (prefers-reduced-motion:reduce){.pata,.punto.ultimo .vis{animation:none}}
 </style>
 </head>
 <body>
 <header>
-  <div><h1 id="titulo"></h1><p id="sub"></p></div>
+  <div><h1 id="titulo"></h1><p id="sub"></p><p id="prox" style="color:var(--ambar);font-size:14px;margin:4px 0 0"></p></div>
   <nav>
     <button class="btn" id="bMusica">Música</button>
     <button class="btn" id="bCal">Calendario</button>
     <button class="btn" id="bUlt">Lo más reciente</button>
+    <button class="btn" id="bCita">Agendar cita</button>
     <button class="btn principal" id="bNuevo">Generar recuerdo</button>
   </nav>
 </header>
@@ -127,6 +129,20 @@ textarea{min-height:90px;resize:vertical}
   <div class="fila"><button class="btn" data-cerrar>Cancelar</button><button class="btn principal" id="bGuardar">Guardar recuerdo</button></div>
 </dialog>
 
+<dialog id="dCita">
+  <h2>Agendar cita</h2>
+  <label for="cFecha">¿Qué día?</label>
+  <input type="date" id="cFecha">
+  <label for="cHora">¿A qué hora?</label>
+  <input type="time" id="cHora">
+  <label for="cTexto">¿Qué vamos a hacer?</label>
+  <textarea id="cTexto" maxlength="200"></textarea>
+  <label for="cClave">Clave</label>
+  <input type="password" id="cClave" autocomplete="off">
+  <p id="cMsg" role="status"></p>
+  <div class="fila"><button class="btn" data-cerrar>Cancelar</button><button class="btn principal" id="bGuardarCita">Guardar cita</button></div>
+</dialog>
+
 <audio id="audio" preload="none"></audio>
 
 <script>
@@ -147,7 +163,7 @@ const RESPALDO=[
 const NS="http://www.w3.org/2000/svg", $=id=>document.getElementById(id);
 const ruta=$("ruta"), L=ruta.getTotalLength(), tort=$("tortuga");
 const reducir=matchMedia("(prefers-reduced-motion: reduce)").matches;
-let ms=[], els=[], ts=[], pos=0, anim=0, firma="", selIdx=-1, calMes=new Date(), ciclo={};
+let citas=[], ms=[], els=[], ts=[], pos=0, anim=0, firma="", selIdx=-1, calMes=new Date(), ciclo={};
 
 $("titulo").textContent=TITULO; document.title=TITULO; $("sub").textContent=SUBTITULO;
 
@@ -158,10 +174,15 @@ c.setAttribute("fill","#cfd6f5");c.setAttribute("opacity",.25+r()*.5);$("estrell
 
 const fmt=f=>{const d=new Date(f+"T12:00:00");return isNaN(d)?f:d.toLocaleDateString("es",{day:"numeric",month:"long",year:"numeric"});};
 
+function pintarProx(){
+  const h=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+  const c=citas.filter(x=>x.fecha>=h).sort((a,b)=>(a.fecha+a.hora)<(b.fecha+b.hora)?-1:1)[0];
+  $("prox").textContent=c?"Próxima cita: "+fmt(c.fecha)+", "+c.hora+" — "+c.texto:"";
+}
 /* ---------- datos ---------- */
 async function cargar(){
   if(!API_URL) return RESPALDO;
-  try{const r=await fetch(API_URL+"?v="+Date.now());return (await r.json()).momentos||[];}
+  try{const r=await fetch(API_URL+"?v="+Date.now());const j=await r.json();citas=j.citas||[];return j.momentos||[];}
   catch(e){return null;}
 }
 
@@ -220,7 +241,7 @@ function dibujar(lista,irAlUltimo){
 async function actualizar(forzar){
   const lista=await cargar();
   if(lista===null){if(!ms.length)$("frase").textContent="No pude cargar los recuerdos. Revisa la conexión y vuelve a abrir el enlace.";return;}
-  const f=JSON.stringify(lista);
+  pintarProx();const f=JSON.stringify(lista);
   if(f===firma&&!forzar)return;
   const habia=firma!=="";firma=f;
   dibujar(lista,true);
@@ -238,12 +259,13 @@ function pintarCal(){
   const y=calMes.getFullYear(),mes=calMes.getMonth();
   $("calTitulo").textContent=new Date(y,mes,1).toLocaleDateString("es",{month:"long",year:"numeric"});
   const dias=new Date(y,mes+1,0).getDate(),off=(new Date(y,mes,1).getDay()+6)%7;
-  const con=new Set(ms.map(m=>m.fecha));
+  const con=new Set(ms.map(m=>m.fecha)),cc=new Set(citas.map(c=>c.fecha));
   let h=["L","M","X","J","V","S","D"].map(d=>'<span class="dow">'+d+'</span>').join("");
   for(let i=0;i<off;i++)h+="<span></span>";
   for(let d=1;d<=dias;d++){
     const f=y+"-"+String(mes+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
-    h+='<button type="button" data-f="'+f+'" class="'+(con.has(f)?"tiene":"")+'"'+(con.has(f)?"":" tabindex=\"-1\"")+'>'+d+'</button>';
+    const t=con.has(f),c=cc.has(f)&&!t;
+    h+='<button type="button" data-f="'+f+'" class="'+(t?"tiene":c?"cita":"")+'"'+(t||c?"":' tabindex="-1"')+'>'+d+'</button>';
   }
   $("grid").innerHTML=h;
 }
@@ -253,7 +275,11 @@ $("calSig").onclick=()=>{calMes=new Date(calMes.getFullYear(),calMes.getMonth()+
 $("grid").addEventListener("click",e=>{
   const f=e.target.dataset&&e.target.dataset.f;if(!f)return;
   const ids=ms.map((m,i)=>m.fecha===f?i:-1).filter(i=>i>=0);
-  if(!ids.length)return;
+  if(!ids.length){
+    const c=citas.filter(x=>x.fecha===f);
+    if(c.length){$("dCal").close();$("fecha").textContent=fmt(f)+" · cita";$("frase").textContent=c.map(x=>x.hora+" — "+x.texto).join(" · ");$("foto").hidden=true;}
+    return;
+  }
   ciclo[f]=((ciclo[f]??-1)+1)%ids.length;   // si hay varios el mismo día, cada toque pasa al siguiente
   $("dCal").close();ir(ids[ciclo[f]]);
 });
@@ -305,6 +331,26 @@ $("bGuardar").onclick=async()=>{
     }
   }catch(e){msg.textContent="Algo falló al guardar. Intenta otra vez.";}
   $("bGuardar").disabled=false;
+};
+
+/* agendar cita */
+$("bCita").onclick=()=>{
+  $("cFecha").value=hoy();$("cHora").value="19:00";$("cTexto").value="";
+  $("cClave").value=localStorage.getItem("clave")||"";$("cMsg").textContent="";
+  $("dCita").showModal();
+};
+$("bGuardarCita").onclick=async()=>{
+  const msg=$("cMsg"),fecha=$("cFecha").value,hora=$("cHora").value,texto=$("cTexto").value.trim(),clave=$("cClave").value;
+  if(!API_URL){msg.textContent="Falta pegar el enlace de Apps Script en API_URL.";return;}
+  if(!fecha||!hora||!texto){msg.textContent="Escribe el día, la hora y qué van a hacer.";return;}
+  $("bGuardarCita").disabled=true;msg.textContent="Guardando…";
+  try{
+    const r=await fetch(API_URL,{method:"POST",body:JSON.stringify({tipo:"cita",clave,fecha,hora,texto})});
+    const j=await r.json();
+    if(!j.ok){msg.textContent=j.error||"No se pudo guardar.";}
+    else{localStorage.setItem("clave",clave);$("dCita").close();await actualizar(true);}
+  }catch(e){msg.textContent="Algo falló al guardar. Intenta otra vez.";}
+  $("bGuardarCita").disabled=false;
 };
 </script>
 </body>
